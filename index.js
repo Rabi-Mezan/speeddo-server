@@ -24,6 +24,7 @@ async function run() {
         const database = client.db('speeddo')
         const bikeCollection = database.collection('bikes');
         const ordersCollection = database.collection('orders')
+        const usersCollection = database.collection('users')
 
 
         // get bikes a[i]
@@ -51,6 +52,28 @@ async function run() {
 
         })
 
+        // my orders api
+        app.get('/myorders/:email', async (req, res) => {
+            const email = req.params.email
+            const query = { email: email }
+            const result = await ordersCollection.find(query).toArray();
+            res.json(result)
+        })
+
+        // post api for users
+        app.post('/users', async (req, res) => {
+            const user = req.body
+            const result = await usersCollection.insertOne(user)
+            res.send(result)
+        })
+
+        //cancel orders api
+        app.delete('/myorders/:id', async (req, res) => {
+            const id = req.params.id
+            const query = { _id: ObjectId(id) }
+            const result = await ordersCollection.deleteOne(query)
+            res.send(result)
+        })
 
     }
     finally {
