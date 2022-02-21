@@ -25,9 +25,10 @@ async function run() {
         const bikeCollection = database.collection('bikes');
         const ordersCollection = database.collection('orders')
         const usersCollection = database.collection('users')
+        const wishlistCollection = database.collection('wishlist')
 
 
-        // get bikes a[i]
+        // get bikes api
         app.get('/bikes', async (req, res) => {
             const result = await bikeCollection.find({}).toArray()
             res.send(result)
@@ -48,6 +49,23 @@ async function run() {
             const data = req.body;
             const result = await ordersCollection.insertOne(data)
             console.log(result);
+            res.send(result)
+
+        })
+
+
+        //add wisthlists api
+        app.post('/wishlist', async (req, res) => {
+            const data = req.body;
+            const result = await wishlistCollection.insertOne(data)
+            res.json(result)
+        })
+
+        //user wishlist get api
+        app.get('/mywishlist/:email', async (req, res) => {
+            const email = req.params.email;
+            const query = { email: email }
+            const result = await wishlistCollection.find(query).toArray()
             res.send(result)
 
         })
