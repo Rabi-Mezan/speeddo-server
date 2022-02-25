@@ -5,6 +5,19 @@ const cors = require('cors');
 require('dotenv').config()
 const { MongoClient } = require('mongodb');
 const ObjectId = require('mongodb').ObjectId
+var admin = require("firebase-admin");
+
+
+
+// firebase admin init
+var serviceAccount = require('./speeddo-49d51-firebase-adminsdk-gdj05-b70d646ff1.json');
+
+admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount)
+});
+
+
+
 
 
 app.use(cors())
@@ -14,6 +27,19 @@ const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true });
 
 
+// token verify
+async function verifyToken(req, res, next) {
+    if (req?.headers?.authorization?.startsWith('Bearer')) {
+        const token = (req.headers.authorization.split('Bearer ')[1])
+        try {
+            const decodedUser = await admin.auth().verifyIdToken(token)
+            req.decodedEmail = decodedUser.email;
+        }
+        catch {
+        }
+    }
+    next();
+}
 
 
 async function run() {
@@ -34,14 +60,21 @@ async function run() {
             res.send(result)
         })
 
-        // get bike details api
 
+        // get bike details api
         app.get('/details/:id', async (req, res) => {
 
             const id = req.params.id
             const query = { _id: ObjectId(id) }
             const result = await bikeCollection.findOne(query)
             res.send(result)
+        })
+
+
+        //get users api
+        app.get('/users', async (req, res) => {
+            const result = await usersCollection.find({}).toArray()
+            res.send(result);
         })
 
         // orders post api
@@ -71,11 +104,17 @@ async function run() {
         })
 
         // my orders api
-        app.get('/myorders/:email', async (req, res) => {
+        app.get('/myorders/:email', verifyToken, async (req, res) => {
             const email = req.params.email
-            const query = { email: email }
-            const result = await ordersCollection.find(query).toArray();
-            res.json(result)
+            console.log(email, req.decodedEmail);
+            if (req.decodedEmail === email) {
+                const query = { email: email }
+                const result = await ordersCollection.find(query).toArray();
+                res.json(result)
+            }
+            else {
+                res.status(401).json({ message: 'User Unauthorized!' })
+            }
         })
 
         // post api for users
@@ -91,6 +130,21 @@ async function run() {
             const query = { _id: ObjectId(id) }
             const result = await ordersCollection.deleteOne(query)
             res.send(result)
+        })
+
+
+
+        //check admin api
+        app.get('/users/:email', async (req, res) => {
+
+            const email = req.params.email;
+            const query = { email: email }
+            let user = await usersCollection.findOne(query)
+            let isAdmin = false
+            if (user?.role === 'admin') {
+                isAdmin = true
+            }
+            res.json({ admin: isAdmin })
         })
 
     }
